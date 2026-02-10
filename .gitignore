@@ -17,6 +17,10 @@ __pycache__/
 dist/
 build/
 
+# Next.js
+frontend/.next/
+frontend/node_modules/
+
 # IDE
 .idea/
 .vscode/

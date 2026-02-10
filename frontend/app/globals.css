@@ -1,0 +1,6 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Leaflet needs its CSS in global scope */
+@import "leaflet/dist/leaflet.css";
