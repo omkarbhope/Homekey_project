@@ -1,0 +1,26 @@
+flowchart LR
+  subgraph api [API Layer]
+    GET[GET /api/property-profile]
+    POST[POST /api/property-profile]
+    GET --> Build
+    POST --> Build
+  end
+  subgraph core [Core]
+    Build[build_property_profile]
+    Schema[schemas/profile.py]
+    Build --> Schema
+  end
+  subgraph services [Services]
+    Geocode[geocode.py]
+    Schools[schools.py]
+    RentCast[rentcast.py]
+    POI[nearby_poi.py]
+    News[local_news.py]
+    Img[placeholder_images.py]
+  end
+  Build --> Geocode
+  Build --> Schools
+  Build --> RentCast
+  Build --> POI
+  Build --> News
+  Build --> Img

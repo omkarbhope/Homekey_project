@@ -1,0 +1,26 @@
+flowchart TB
+  subgraph client [Frontend Next.js 14]
+    Page[page.tsx]
+    API[lib/api.ts]
+  end
+  subgraph backend [Backend FastAPI]
+    Router[routers/property.py]
+    Agg[services/aggregator.py]
+  end
+  subgraph external [External APIs]
+    Census[Census Geocoder]
+    NCES[NCES EDGE Schools]
+    RentCast[RentCast]
+    Overpass[Overpass OSM]
+    NewsCatcher[NewsCatcher]
+    Unsplash[Unsplash]
+  end
+  Page -->|GET property-profile?address=...| API
+  API -->|HTTP| Router
+  Router --> Agg
+  Agg --> Census
+  Agg --> NCES
+  Agg --> RentCast
+  Agg --> Overpass
+  Agg --> NewsCatcher
+  Agg --> Unsplash

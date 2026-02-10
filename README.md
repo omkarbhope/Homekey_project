@@ -1,67 +1,80 @@
-# Real Estate Property Profile API
+# Real Estate Property Profile
 
-FastAPI backend that aggregates property-related data from multiple sources. Users send an address and receive a single response with **location**, **map data**, **nearby schools**, and **property info** (tax, owner, etc.) so the UI can show one comprehensive view without calling external APIs directly.
+Full-stack app that turns scattered property information into one place: enter an address and get a **unified profile** with location, map, schools, property details, nearby places, and local news. Built to help buyers see a comprehensive picture before making property decisions.
+
+- **Frontend**: Next.js 14 single-page app — address search, map (Leaflet), tabbed result (Property, Location, Schools, Nearby places, News).
+- **Backend**: FastAPI — geocode then aggregate from Census, NCES, RentCast, Overpass, NewsCatcher, and optional Unsplash in one response.
 
 ---
 
-## What data the backend pulls
+## What the backend aggregates
 
-The API does not store data; it fetches and merges it on each request from these sources:
+The API does not store data; it fetches and merges on each request:
 
 | Source | What it provides | API key |
 |--------|-------------------|--------|
-| **US Census Geocoder** | Converts an address to latitude/longitude and returns census geography (state, county, tract, block, congressional district, urban area, etc.). Used as the map center and to query schools. | None |
-| **NCES EDGE (K–12 schools)** | Public school locations near the geocoded point. For each school: name, NCES ID, street, city, state, ZIP, lat/lon. Used for map pins and a schools list. | None |
-| **RentCast** | Property record when available: formatted address, property type, tax assessments (by year), property taxes, owner info, coordinates, assessor ID. Not every address has data (e.g. many government buildings return no record). | Required (see [Setup](#setup)) |
+| **US Census Geocoder** | Address → lat/lon, normalized address, census geography (state, county, tract, etc.). Used as map center and for downstream queries. | None |
+| **NCES EDGE (K–12)** | Schools near the point: name, NCES ID, address, lat/lon. Map pins + schools list. | None |
+| **RentCast** | Property record when available: address, type, tax assessments, property taxes, owner. Not every address has data. | **Required** |
+| **Overpass (OSM)** | Nearby POI: restaurants, cafes, grocery, gyms, malls, etc. within a configurable radius. | None |
+| **NewsCatcher** | Local news for the area (city/state). | Optional |
+| **Unsplash** | One placeholder property image when RentCast returns a property. | Optional |
 
-**Not included in this version:** MLS-style “for sale” listings or listing images. The response reserves `listings` and `images` for future use.
+Without **RENTCAST_API_KEY**, property data is always `null`; geocoding, schools, POI, and (if key set) news still work.
 
 ---
 
 ## How it works
 
-1. **Request** – The client calls `GET /api/property-profile?address=...` or `POST /api/property-profile` with `{"address": "..."}`.
-2. **Geocode** – The backend calls the Census Geocoder. If the address cannot be geocoded, it returns `404`.
-3. **Parallel fetch** – Using the returned lat/lon, it calls **NCES** (schools near the point) and **RentCast** (property by address) in parallel.
-4. **Merge** – Results are combined into one JSON payload: `location`, `map` (center + school points), `schools`, and `property` (or `null` with `property_message` when RentCast has no data).
-5. **Response** – The client gets a single `PropertyProfileResponse` with everything needed to render the address, map, school list, and property details.
+1. **Request** — Client calls `GET /api/property-profile?address=...` (optional `&radius_km=2`).
+2. **Geocode** — Backend uses Census. If the address cannot be geocoded, it returns 404.
+3. **Parallel fetch** — Using lat/lon and address: NCES (schools), RentCast (property), Overpass (POI), NewsCatcher (local news). If property exists and Unsplash key is set, one placeholder image is fetched.
+4. **Merge** — Results are combined into a single `PropertyProfileResponse`.
+5. **Response** — One JSON payload: `location`, `map`, `schools`, `property` (or null + `property_message`), `nearby_places`, `local_news`, `images` (optional).
 
-```
-Address → Census (geocode) → lat, lon, census geography
-                ↓
-        ┌───────┴───────┐
-        ↓               ↓
-   NCES (schools)   RentCast (property)
-        ↓               ↓
-        └───────┬───────┘
-                ↓
-        PropertyProfileResponse
-```
+Architecture and data flow are documented in [docs/DESIGN.md](docs/DESIGN.md) with [diagrams](docs/diagrams/) (Mermaid → PNG).
 
 ---
 
-## Setup
+## Quick start
 
-1. **Python** – Use Python 3.9+ and a virtual environment (e.g. `real`).
+### Backend (FastAPI)
 
-2. **Install dependencies** (from project root):
+1. **Python 3.9+** and a virtual environment, e.g. `python3 -m venv real && source real/bin/activate`.
+2. **Install** (from project root):
    ```bash
-   real/bin/pip install -r requirements.txt
+   pip install -r requirements.txt
    ```
-   Or with the venv activated: `pip install -r requirements.txt`.
-
-3. **RentCast API key** – Create a key at [RentCast API Dashboard](https://app.rentcast.io/app/api) (free tier: 50 calls/month). Add it to a `.env` file in the project root:
+3. **Environment** — Create a `.env` in the project root:
    ```env
-   RENTCAST_API_KEY=your_api_key_here
+   RENTCAST_API_KEY=your_rentcast_key
+   # Optional: for local news and placeholder image
+   NEWSCATCHER_API_KEY=your_newscatcher_key
+   UNSPLASH_ACCESS_KEY=your_unsplash_key
    ```
-   Without this key, property data will always be `null`; geocoding and schools still work.
-
-4. **Run the server**:
+   Get a RentCast key at [RentCast API](https://app.rentcast.io/app/api) (free tier available).
+4. **Run**:
    ```bash
    uvicorn app.main:app --host 127.0.0.1 --port 8000
    ```
-   API: http://127.0.0.1:8000  
-   Docs: http://127.0.0.1:8000/docs
+   - API: http://127.0.0.1:8000  
+   - Docs: http://127.0.0.1:8000/docs  
+
+### Frontend (Next.js)
+
+1. **Node 18+**. From project root:
+   ```bash
+   cd frontend && npm install
+   ```
+2. **Environment** — Create `frontend/.env.local` (optional; defaults to backend on port 8000):
+   ```env
+   NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+   ```
+3. **Run** (with backend already running):
+   ```bash
+   npm run dev
+   ```
+   App: http://localhost:3000  
 
 ---
 
@@ -69,16 +82,14 @@ Address → Census (geocode) → lat, lon, census geography
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/health` | Health check. Returns `{"status": "ok"}`. No external API calls. |
-| GET | `/api/property-profile?address=...` | **Main endpoint.** Returns full profile: location, map, schools, property (or null). |
-| POST | `/api/property-profile` | Same as above; send `{"address": "123 Main St, City, ST ZIP"}` in the body. |
+| GET | `/health` | Health check. Returns `{"status": "ok"}`. |
+| GET | `/api/property-profile?address=...` | **Main endpoint.** Full profile. Optional: `radius_km` (0.5–10, default 2). |
+| POST | `/api/property-profile` | Same; body `{"address": "...", "radius_km": 2}`. |
 | GET | `/api/geocode?address=...` | Census only: lat, lon, matched address, census geography. |
-| GET | `/api/schools?lat=...&lon=...&radius_km=...` | NCES only: list of schools near the point (default `radius_km=5`). |
-| GET | `/api/property?address=...` | RentCast only: property record or 404 if no data. |
+| GET | `/api/schools?lat=...&lon=...&radius_km=...` | NCES only: schools near point (default `radius_km=5`). |
+| GET | `/api/property?address=...` | RentCast only: property record or 404. |
 
-**Errors**
-
-- **404** – Address could not be geocoded (`/api/property-profile`, `/api/geocode`) or no property data for that address (`/api/property`).
+**Errors:** 404 when address cannot be geocoded (property-profile, geocode) or no property for that address (/api/property).
 
 ---
 
@@ -89,33 +100,33 @@ Address → Census (geocode) → lat, lon, census geography
 ```json
 {
   "location": {
-    "normalized_address": "4600 SILVER HILL RD, WASHINGTON, DC, 20233",
-    "lat": 38.846,
-    "lon": -76.927,
+    "normalized_address": "123 MAIN ST, CITY, ST 12345",
+    "lat": 38.9,
+    "lon": -77.0,
     "census_geography": { "States": [...], "Counties": [...], "Census Tracts": [...], ... }
   },
   "map": {
-    "center": { "lat": 38.846, "lon": -76.927 },
-    "schools": [
-      { "name": "...", "lat": 38.87, "lon": -76.94, "street": "...", "city": "...", "state": "...", "zip": "..." }
-    ]
+    "center": { "lat": 38.9, "lon": -77.0 },
+    "schools": [{ "name": "...", "lat": ..., "lon": ..., "street": "...", "city": "...", "state": "...", "zip": "..." }]
   },
-  "schools": [
-    { "name": "...", "nces_id": "...", "street": "...", "city": "...", "state": "...", "zip": "...", "lat": ..., "lon": ... }
-  ],
+  "schools": [{ "name": "...", "nces_id": "...", "street": "...", "city": "...", "state": "...", "zip": "...", "lat": ..., "lon": ... }],
   "property": { ... } | null,
   "property_message": "No property data for this address." | null,
   "listings": null,
-  "images": null
+  "images": [{ "url": "...", "placeholder": true }] | null,
+  "nearby_places": [{ "name": "...", "lat": ..., "lon": ..., "category": "...", "address": "..." }],
+  "radius_km": 2,
+  "local_news": [{ "title": "...", "url": "...", "source": "...", "published_date": "..." }] | null
 }
 ```
 
-- **location** – Use for display and as map center.
-- **map.center** – Map center (lat/lon).
-- **map.schools** – School points for map pins (name, lat, lon, address fields).
-- **schools** – Same schools for a list/detail view (includes `nces_id`).
-- **property** – RentCast payload when available (address, type, taxAssessments, propertyTaxes, owner, etc.); otherwise `null` and **property_message** is set.
-- **listings** / **images** – Reserved for future use.
+- **location** / **map** — Display and map center; **map.schools** for school pins.
+- **schools** — Same schools for list/detail (includes **nces_id**).
+- **property** — RentCast payload when available; otherwise **null** and **property_message** set.
+- **nearby_places** — POI from Overpass within **radius_km**.
+- **local_news** — Present when NewsCatcher key is set.
+- **images** — One Unsplash placeholder URL when property exists and Unsplash key is set.
+- **listings** — Reserved for future use.
 
 ---
 
@@ -123,26 +134,35 @@ Address → Census (geocode) → lat, lon, census geography
 
 ```
 Real-estate/
-  app/
-    main.py           # FastAPI app, CORS, router
-    config.py         # Loads RENTCAST_API_KEY from .env
-    schemas/
-      profile.py      # Pydantic: PropertyProfileResponse, Location, School, etc.
-    routers/
-      property.py     # /api/property-profile, /api/geocode, /api/schools, /api/property
+  app/                    # Backend (FastAPI)
+    main.py               # App, CORS, routers
+    config.py             # .env: RENTCAST_API_KEY, NEWSCATCHER_API_KEY, UNSPLASH_ACCESS_KEY
+    schemas/profile.py    # PropertyProfileResponse, Location, School, NearbyPlace, NewsItem, ...
+    routers/property.py   # /api/property-profile, /api/geocode, /api/schools, /api/property
     services/
-      geocode.py      # Census Geocoder
-      schools.py      # NCES EDGE (schools near point)
-      rentcast.py     # RentCast property by address
-      aggregator.py   # Orchestrates geocode → schools + property → profile
-  test_scripts/       # Standalone scripts to test Census, NCES, RentCast (see test_scripts/README.md)
-  .env                # RENTCAST_API_KEY (not committed)
+      aggregator.py       # Geocode → parallel fetch → single profile
+      geocode.py          # Census Geocoder
+      schools.py         # NCES EDGE
+      rentcast.py        # RentCast property
+      nearby_poi.py      # Overpass POI
+      local_news.py      # NewsCatcher
+      placeholder_images.py  # Unsplash
+  frontend/               # Next.js 14
+    app/page.tsx         # Home: search → result / loading / error
+    components/         # AddressSearch, ResultView, MapView, ResultRightPanel (tabs), ...
+    lib/api.ts           # fetchPropertyProfile(address, radiusKm?)
+    lib/types.ts         # Types aligned with backend schema
+  docs/
+    DESIGN.md            # Architecture, data flow, frontend structure
+    diagrams/            # Mermaid sources (.mmd) and rendered PNGs
+  test_scripts/          # Standalone scripts for Census, NCES, RentCast (see test_scripts/README.md)
+  .env                   # API keys (not committed)
   requirements.txt
-  README.md           # This file
+  README.md
 ```
 
 ---
 
 ## CORS
 
-The API allows requests from `http://localhost:3000` and `http://127.0.0.1:3000` so a local frontend can call it. Adjust `allow_origins` in `app/main.py` for other origins.
+The API allows `http://localhost:3000` and `http://127.0.0.1:3000`. Change `allow_origins` in `app/main.py` for other origins.

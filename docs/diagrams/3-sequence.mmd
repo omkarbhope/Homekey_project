@@ -1,0 +1,30 @@
+sequenceDiagram
+  participant Client
+  participant Router
+  participant Aggregator
+  participant Geocode
+  participant Schools
+  participant RentCast
+  participant POI
+  participant News
+  participant Unsplash
+  Client->>Router: GET /api/property-profile?address=...&radius_km=2
+  Router->>Aggregator: build_property_profile(address, radius_km)
+  Aggregator->>Geocode: geocode_address_with_geographies(address)
+  Geocode-->>Aggregator: lat, lon, matched_address, geographies
+  par
+    Aggregator->>Schools: get_schools_near_point(lon, lat, 5km)
+    Aggregator->>RentCast: get_property_by_address(address)
+    Aggregator->>POI: get_nearby_poi(lat, lon, radius_km)
+    Aggregator->>News: get_local_news(city, state)
+  end
+  Schools-->>Aggregator: schools[]
+  RentCast-->>Aggregator: property or null
+  POI-->>Aggregator: poi[]
+  News-->>Aggregator: news[]
+  opt if property and UNSPLASH_ACCESS_KEY
+    Aggregator->>Unsplash: get_placeholder_image(city, property_type)
+    Unsplash-->>Aggregator: url or None
+  end
+  Aggregator-->>Router: PropertyProfileResponse
+  Router-->>Client: JSON PropertyProfileResponse

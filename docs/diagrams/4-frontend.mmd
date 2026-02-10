@@ -1,0 +1,27 @@
+flowchart TB
+  subgraph page [Page State]
+    ViewState["viewState: empty | loading | error | result"]
+    Profile["profile: PropertyProfileResponse | null"]
+    Loading[loading]
+    Error[error]
+  end
+  subgraph layouts [Layouts]
+    Empty[Centered search]
+    LoadingLayout[Header + ResultSkeleton]
+    ResultLayout[Header + ResultView]
+    ErrorLayout[Centered ErrorState + search]
+  end
+  ViewState --> Empty
+  ViewState --> LoadingLayout
+  ViewState --> ResultLayout
+  ViewState --> ErrorLayout
+  ResultLayout --> ResultView
+  ResultView --> MapView
+  ResultView --> ResultRightPanel
+  ResultRightPanel --> Tabs["Tabs: Property, Location, Schools, Places, News"]
+  ResultRightPanel --> PropertyCard
+  ResultRightPanel --> LocationCard
+  ResultRightPanel --> SchoolsList
+  ResultRightPanel --> PlacesList
+  ResultRightPanel --> NewsList
+  ResultRightPanel --> DetailPanel
