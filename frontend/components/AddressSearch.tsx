@@ -10,6 +10,7 @@ type AddressSearchProps = {
   onLoading: (loading: boolean) => void;
   disabled?: boolean;
   defaultValue?: string;
+  variant?: "default" | "compact";
 };
 
 export function AddressSearch({
@@ -18,6 +19,7 @@ export function AddressSearch({
   onLoading,
   disabled = false,
   defaultValue = "",
+  variant = "default",
 }: AddressSearchProps) {
   const [value, setValue] = useState(defaultValue);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,30 +45,38 @@ export function AddressSearch({
   );
 
   const loading = disabled || isLoading;
+  const isCompact = variant === "compact";
 
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-2xl flex gap-2">
+    <form
+      onSubmit={handleSubmit}
+      className={`w-full flex gap-2 ${isCompact ? "max-w-xl" : "max-w-2xl"}`}
+    >
       <input
         type="text"
         placeholder="Enter full address"
         value={value}
         onChange={(e) => setValue(e.target.value)}
         disabled={loading}
-        className="flex-1 rounded-lg border border-slate-300 px-4 py-3.5 text-base text-slate-900 placeholder-slate-500 transition-colors hover:border-slate-400 focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600/20 disabled:bg-slate-100 disabled:cursor-not-allowed"
+        className={`flex-1 rounded-lg border border-slate-300 text-slate-900 placeholder-slate-500 transition-colors hover:border-slate-400 focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600/20 disabled:bg-slate-100 disabled:cursor-not-allowed ${
+          isCompact ? "px-3 py-2 text-sm" : "px-4 py-3.5 text-base"
+        }`}
         aria-label="Address"
       />
       <button
         type="submit"
         disabled={loading || !value.trim()}
-        className="rounded-lg bg-primary-600 px-6 py-3.5 text-base font-medium text-white transition-colors hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2 disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center min-w-[100px]"
+        className={`rounded-lg bg-primary-600 font-medium text-white transition-colors hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2 disabled:bg-slate-400 disabled:cursor-not-allowed flex items-center justify-center ${
+          isCompact ? "px-4 py-2 text-sm min-w-[80px]" : "px-6 py-3.5 text-base min-w-[100px]"
+        }`}
       >
         {loading ? (
           <>
             <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin mr-2" aria-hidden />
-            Searching…
+            {isCompact ? "…" : "Searching…"}
           </>
         ) : (
-          "Search"
+          isCompact ? "Search" : "Search"
         )}
       </button>
     </form>

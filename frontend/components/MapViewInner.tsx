@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -9,9 +9,10 @@ import {
   useMap,
 } from "react-leaflet";
 import L from "leaflet";
-import type { MapSchool } from "@/lib/types";
+import type { MapSchool, NearbyPlace } from "@/lib/types";
 
 const DEFAULT_ZOOM = 14;
+const MAX_POI_MARKERS = 25;
 
 function CenterController({
   position,
@@ -19,9 +20,22 @@ function CenterController({
   position: [number, number];
 }) {
   const map = useMap();
-  useMemo(() => {
+  useEffect(() => {
     map.setView(position, DEFAULT_ZOOM);
   }, [map, position[0], position[1]]);
+  return null;
+}
+
+function FocusController({
+  focusPoint,
+}: {
+  focusPoint?: { lat: number; lon: number; zoom: number };
+}) {
+  const map = useMap();
+  useEffect(() => {
+    if (!focusPoint) return;
+    map.flyTo([focusPoint.lat, focusPoint.lon], focusPoint.zoom, { duration: 0.5 });
+  }, [map, focusPoint?.lat, focusPoint?.lon, focusPoint?.zoom]);
   return null;
 }
 
@@ -39,12 +53,21 @@ const schoolIcon = new L.DivIcon({
   iconAnchor: [10, 10],
 });
 
+const poiIcon = new L.DivIcon({
+  className: "poi-marker",
+  html: `<div style="width:14px;height:14px;background:#64748b;border:2px solid white;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,0.3);"></div>`,
+  iconSize: [14, 14],
+  iconAnchor: [7, 7],
+});
+
 type MapViewInnerProps = {
   position: [number, number];
   schools: MapSchool[];
+  nearbyPlaces: NearbyPlace[];
+  focusPoint?: { lat: number; lon: number; zoom: number };
 };
 
-export default function MapViewInner({ position, schools }: MapViewInnerProps) {
+export default function MapViewInner({ position, schools, nearbyPlaces, focusPoint }: MapViewInnerProps) {
   const schoolMarkers = useMemo(
     () =>
       schools
@@ -56,6 +79,14 @@ export default function MapViewInner({ position, schools }: MapViewInnerProps) {
     [schools]
   );
 
+  const poiMarkers = useMemo(
+    () =>
+      nearbyPlaces
+        .slice(0, MAX_POI_MARKERS)
+        .map((p) => ({ ...p, pos: [p.lat, p.lon] as [number, number] })),
+    [nearbyPlaces]
+  );
+
   return (
     <MapContainer
       center={position}
@@ -64,6 +95,7 @@ export default function MapViewInner({ position, schools }: MapViewInnerProps) {
       scrollWheelZoom
     >
       <CenterController position={position} />
+      <FocusController focusPoint={focusPoint} />
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -83,6 +115,16 @@ export default function MapViewInner({ position, schools }: MapViewInnerProps) {
                     .join(" ")}
                 </div>
               )}
+            </div>
+          </Popup>
+        </Marker>
+      ))}
+      {poiMarkers.map((p, i) => (
+        <Marker key={`poi-${p.name}-${p.lat}-${p.lon}-${i}`} position={p.pos} icon={poiIcon}>
+          <Popup>
+            <div className="text-sm">
+              <div className="font-medium">{p.name}</div>
+              <div className="text-slate-500">{p.category}</div>
             </div>
           </Popup>
         </Marker>

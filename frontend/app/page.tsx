@@ -3,10 +3,9 @@
 import { useState, useCallback } from "react";
 import type { PropertyProfileResponse } from "@/lib/types";
 import { AddressSearch } from "@/components/AddressSearch";
-import { EmptyState } from "@/components/EmptyState";
-import { LoadingState } from "@/components/LoadingState";
 import { ErrorState } from "@/components/ErrorState";
 import { ResultView } from "@/components/ResultView";
+import { ResultSkeleton } from "@/components/ResultSkeleton";
 
 type ViewState = "empty" | "loading" | "error" | "result";
 
@@ -39,26 +38,71 @@ export default function Home() {
       onError={handleError}
       onLoading={setLoading}
       disabled={loading}
+      variant="default"
     />
   );
 
+  const searchBarCompact = (
+    <AddressSearch
+      onResult={handleResult}
+      onError={handleError}
+      onLoading={setLoading}
+      disabled={loading}
+      variant="compact"
+      defaultValue={profile?.location?.normalized_address ?? ""}
+    />
+  );
+
+  if (viewState === "result" && profile) {
+    return (
+      <main className="h-screen flex flex-col bg-slate-50 overflow-hidden">
+        <header className="shrink-0 border-b border-slate-200 bg-white px-4 py-3">
+          <div className="max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+            <span className="text-sm font-medium text-slate-500 shrink-0">
+              Property Profile
+            </span>
+            <div className="flex-1 w-full min-w-0">{searchBarCompact}</div>
+          </div>
+        </header>
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <ResultView profile={profile} />
+        </div>
+      </main>
+    );
+  }
+
+  if (viewState === "loading") {
+    return (
+      <main className="h-screen flex flex-col bg-slate-50 overflow-hidden">
+        <header className="shrink-0 border-b border-slate-200 bg-white px-4 py-3">
+          <div className="max-w-4xl mx-auto flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+            <span className="text-sm font-medium text-slate-500 shrink-0">
+              Property Profile
+            </span>
+            <div className="flex-1 w-full min-w-0">{searchBarCompact}</div>
+          </div>
+        </header>
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <ResultSkeleton />
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen flex flex-col bg-slate-50">
-      <header className="border-b border-slate-200 bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 py-8 md:py-10">
-          <h1 className="text-2xl md:text-3xl font-semibold text-slate-900 mb-2">
-            Property Profile
-          </h1>
-          <p className="text-slate-600 text-base mb-6">
-            One place for location, schools, and property details.
-          </p>
-          {searchBar}
-        </div>
-      </header>
-
-      <div className="flex-1">
-        {viewState === "empty" && <EmptyState />}
-        {viewState === "loading" && <LoadingState />}
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-12 min-h-screen">
+        {viewState === "empty" && (
+          <>
+            <h1 className="text-2xl md:text-4xl font-semibold text-slate-900 mb-2 text-center">
+              Property Profile
+            </h1>
+            <p className="text-slate-600 text-center max-w-md mb-10 text-base">
+              One place for location, schools, and property details.
+            </p>
+            {searchBar}
+          </>
+        )}
         {viewState === "error" && (
           <ErrorState
             message={
@@ -67,11 +111,8 @@ export default function Home() {
                 : "Something went wrong. Please try again."
             }
           >
-            {searchBar}
+            <div className="mt-6 w-full max-w-2xl">{searchBar}</div>
           </ErrorState>
-        )}
-        {viewState === "result" && profile && (
-          <ResultView profile={profile} />
         )}
       </div>
     </main>

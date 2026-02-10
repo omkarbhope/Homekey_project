@@ -13,3 +13,5 @@ if _env_path.is_file():
                 os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
 
 RENTCAST_API_KEY = os.environ.get("RENTCAST_API_KEY", "")
+NEWSCATCHER_API_KEY = os.environ.get("NEWSCATCHER_API_KEY", "")
+UNSPLASH_ACCESS_KEY = os.environ.get("UNSPLASH_ACCESS_KEY", "")

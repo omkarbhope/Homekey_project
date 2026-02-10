@@ -3,6 +3,7 @@
 type PropertyCardProps = {
   property: Record<string, unknown> | null;
   propertyMessage: string | null;
+  images?: { url: string; placeholder?: boolean }[] | null;
 };
 
 interface TaxYear {
@@ -12,7 +13,7 @@ interface TaxYear {
   improvements?: number;
 }
 
-export function PropertyCard({ property, propertyMessage }: PropertyCardProps) {
+export function PropertyCard({ property, propertyMessage, images }: PropertyCardProps) {
   if (property == null) {
     return (
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow transition-shadow hover:shadow-md">
@@ -46,11 +47,25 @@ export function PropertyCard({ property, propertyMessage }: PropertyCardProps) {
   const latestAssessment = sortedTaxYears[0]?.[1];
   const latestTax = sortedPropertyTaxYears[0]?.[1];
 
+  const firstImage = images?.[0];
+
   return (
     <section className="rounded-lg border-l-4 border-l-primary-600 border border-slate-200 bg-white p-5 shadow transition-shadow hover:shadow-md">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 mb-3">
         Property details
       </h2>
+      {firstImage?.url && (
+        <div className="mb-3">
+          <img
+            src={firstImage.url}
+            alt=""
+            className="w-full h-40 object-cover rounded-lg border border-slate-200"
+          />
+          {firstImage.placeholder && (
+            <p className="text-xs text-slate-400 mt-1">Generic image — not the actual property.</p>
+          )}
+        </div>
+      )}
       {address && (
         <p className="text-base text-slate-900 font-medium mb-2">{address}</p>
       )}

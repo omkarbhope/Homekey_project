@@ -41,9 +41,27 @@ class School(BaseModel):
     lon: Optional[float] = None
 
 
+class NearbyPlace(BaseModel):
+    """POI from Overpass (food, gym, grocery, mall, etc.)."""
+    name: str
+    lat: float
+    lon: float
+    category: str
+    address: Optional[str] = None
+
+
+class NewsItem(BaseModel):
+    """Local news item (area-based)."""
+    title: str
+    url: str
+    source: Optional[str] = None
+    published_date: Optional[str] = None
+
+
 class PropertyProfileRequest(BaseModel):
     """Request body for POST /api/property-profile."""
     address: str
+    radius_km: Optional[float] = Field(None, ge=0.5, le=10.0)
 
 
 class PropertyProfileResponse(BaseModel):
@@ -55,3 +73,6 @@ class PropertyProfileResponse(BaseModel):
     property_message: Optional[str] = None
     listings: Optional[Any] = None
     images: Optional[list[Any]] = None
+    nearby_places: list[NearbyPlace] = Field(default_factory=list)
+    radius_km: Optional[float] = None
+    local_news: Optional[list[NewsItem]] = None

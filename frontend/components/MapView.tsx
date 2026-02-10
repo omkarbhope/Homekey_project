@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import type { MapSchool } from "@/lib/types";
+import type { MapSchool, NearbyPlace } from "@/lib/types";
 
 const LazyMap = dynamic(() => import("./MapViewInner"), {
   ssr: false,
@@ -16,19 +16,36 @@ const LazyMap = dynamic(() => import("./MapViewInner"), {
   ),
 });
 
+export type MapFocusPoint = { lat: number; lon: number; zoom: number };
+
 type MapViewProps = {
   center: { lat: number; lon: number };
   schools: MapSchool[];
+  nearbyPlaces?: NearbyPlace[];
+  focusPoint?: MapFocusPoint | null;
 };
 
-export function MapView({ center, schools }: MapViewProps) {
+export function MapView({ center, schools, nearbyPlaces, focusPoint }: MapViewProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const position: [number, number] = useMemo(
     () => [center.lat, center.lon],
     [center.lat, center.lon]
   );
+
   return (
-    <div className="w-full h-full min-h-[320px]">
-      <LazyMap position={position} schools={schools} />
+    <div className="absolute inset-0 w-full h-full min-h-0">
+      {mounted && (
+        <LazyMap
+          position={position}
+          schools={schools}
+          nearbyPlaces={nearbyPlaces ?? []}
+          focusPoint={focusPoint ?? undefined}
+        />
+      )}
     </div>
   );
 }

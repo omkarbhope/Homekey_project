@@ -11,9 +11,12 @@ router = APIRouter(prefix="/api", tags=["property"])
 
 
 @router.get("/property-profile", response_model=PropertyProfileResponse)
-async def get_property_profile(address: str = Query(..., min_length=1)):
-    """Unified property profile: location, map data, schools, property info."""
-    profile = await build_property_profile(address)
+async def get_property_profile(
+    address: str = Query(..., min_length=1),
+    radius_km: float = Query(2.0, ge=0.5, le=10.0),
+):
+    """Unified property profile: location, map data, schools, property, nearby POI."""
+    profile = await build_property_profile(address, radius_km=radius_km)
     if profile is None:
         raise HTTPException(
             status_code=404,
@@ -25,7 +28,8 @@ async def get_property_profile(address: str = Query(..., min_length=1)):
 @router.post("/property-profile", response_model=PropertyProfileResponse)
 async def post_property_profile(body: PropertyProfileRequest):
     """Unified property profile (POST with body)."""
-    profile = await build_property_profile(body.address)
+    radius = body.radius_km if body.radius_km is not None else 2.0
+    profile = await build_property_profile(body.address, radius_km=radius)
     if profile is None:
         raise HTTPException(
             status_code=404,
